@@ -59,4 +59,4 @@ members = [
   "crates/x402-reqwest",
   "examples/x402-reqwest-example",
   "."
-]
+, "crates/x402-actix"]
