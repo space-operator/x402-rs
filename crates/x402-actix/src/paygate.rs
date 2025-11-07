@@ -1,7 +1,14 @@
 use actix_http::header::HeaderMap;
 use serde_json::json;
-use x402_rs::{facilitator::Facilitator, types::{Base64Bytes, FacilitatorErrorReason, PaymentPayload, PaymentRequiredResponse, PaymentRequirements, SettleRequest, SettleResponse, VerifyRequest, VerifyResponse, X402Version}};
 use std::sync::Arc;
+use x402_rs::{
+    facilitator::Facilitator,
+    types::{
+        Base64Bytes, FacilitatorErrorReason, PaymentPayload, PaymentRequiredResponse,
+        PaymentRequirements, SettleRequest, SettleResponse, VerifyRequest, VerifyResponse,
+        X402Version,
+    },
+};
 
 use crate::error::X402Error;
 
@@ -10,7 +17,6 @@ use crate::error::X402Error;
 pub struct X402Paygate<F> {
     pub facilitator: Arc<F>,
     pub payment_requirements: Arc<Vec<PaymentRequirements>>,
-    pub settle_before_execution: bool,
 }
 
 impl<F> X402Paygate<F>
