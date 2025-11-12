@@ -1,5 +1,6 @@
 use std::{collections::HashSet, sync::Arc};
 
+use actix_http::Uri;
 use serde_json::json;
 use url::Url;
 use x402_rs::{
@@ -9,6 +10,7 @@ use x402_rs::{
 
 use crate::{
     facilitator_client::{FacilitatorClient, FacilitatorClientError},
+    paygate::X402Paygate,
     price::PriceTag,
 };
 
@@ -141,10 +143,43 @@ impl<F> X402Middleware<F> {
     }
 }
 
+fn gather_payment_requirements(
+    payment_offers: &PaymentOffers,
+    req_uri: &Uri,
+) -> Arc<Vec<PaymentRequirements>> {
+    match payment_offers {
+        PaymentOffers::Ready(requirements) => {
+            // requirements is &Arc<Vec<PaymentRequirements>>
+            Arc::clone(requirements)
+        }
+        PaymentOffers::NoResource { partial, base_url } => {
+            let resource = {
+                let mut resource_url = base_url.clone();
+                resource_url.set_path(req_uri.path());
+                resource_url.set_query(req_uri.query());
+                resource_url
+            };
+            let payment_requirements = partial
+                .iter()
+                .map(|partial| partial.to_payment_requirements(resource.clone()))
+                .collect::<Vec<_>>();
+            Arc::new(payment_requirements)
+        }
+    }
+}
+
 impl<F> X402Middleware<F>
 where
     F: Clone,
 {
+    pub fn to_paygate(&self, uri: &Uri) -> X402Paygate<F> {
+        let payment_requirements = gather_payment_requirements(&self.payment_offers, uri);
+        X402Paygate {
+            facilitator: self.facilitator.clone(),
+            payment_requirements,
+        }
+    }
+
     /// Sets the description field on all generated payment requirements.
     pub fn with_description(&self, description: &str) -> Self {
         let mut this = self.clone();
@@ -289,28 +324,12 @@ where
     ///     .unwrap()
     ///     .settle_before_execution()
     ///     .with_price_tag(
-    ///         USDCDeployment::by_network(Network::BaseSepolia)
-    ///             .amount("0.01")
-    ///             .pay_to("0xADDRESS")
-    ///             .unwrap()
     ///     );
     /// ```
     #[allow(dead_code)] // Public for consumption by downstream crates.
     pub fn settle_before_execution(&self) -> Self {
         let mut this = self.clone();
         this.settle_before_execution = true;
-        this
-    }
-
-    /// Disables settlement prior to request execution (default behavior).
-    ///
-    /// When disabled, settlement occurs after successful request execution.
-    /// This is the default behavior and allows the application to process
-    /// the request before committing the payment on-chain.
-    #[allow(dead_code)] // Public for consumption by downstream crates.
-    pub fn settle_after_execution(&self) -> Self {
-        let mut this = self.clone();
-        this.settle_before_execution = false;
         this
     }
 
