@@ -8,7 +8,6 @@ use x402_reqwest::chains::solana::SolanaSenderWallet;
 use x402_reqwest::{MaxTokenAmountFromAmount, ReqwestWithPayments, ReqwestWithPaymentsBuild};
 use x402_rs::network::{Network, USDCDeployment};
 
-#[allow(dead_code)] // It is an example!
 async fn buy_evm() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = env::var("EVM_PRIVATE_KEY")?.parse()?;
     let sender = EvmSenderWallet::new(signer);
@@ -59,5 +58,5 @@ async fn buy_solana() -> Result<(), Box<dyn std::error::Error>> {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
 
-    buy_solana().await
+    buy_evm().await
 }

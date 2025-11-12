@@ -402,8 +402,6 @@ where
         self.payment_offers = Arc::new(payment_offers);
         self
     }
-
-    
 }
 
 impl X402Middleware<FacilitatorClient> {
