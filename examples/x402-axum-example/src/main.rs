@@ -3,13 +3,11 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use dotenvy::dotenv;
-use opentelemetry::trace::Status;
 use serde_json::json;
 use std::env;
-use tower_http::trace::TraceLayer;
 use tracing::instrument;
-use tracing_opentelemetry::OpenTelemetrySpanExt;
-use x402_axum::{IntoPriceTag, X402Middleware};
+use x402_axum::X402Middleware;
+use x402_common::price::IntoPriceTag;
 use x402_rs::network::{Network, USDCDeployment};
 use x402_rs::telemetry::Telemetry;
 use x402_rs::{address_evm, address_sol};
@@ -107,53 +105,6 @@ async fn main() {
                     }))
                     .with_price_tag(usdc_base_sepolia.amount(1.00).unwrap()),
             ),
-        )
-        .layer(
-            // Usual HTTP tracing
-            TraceLayer::new_for_http()
-                .make_span_with(|request: &axum::http::Request<_>| {
-                    tracing::info_span!(
-                        "http_request",
-                        otel.kind = "server",
-                        otel.name = %format!("{} {}", request.method(), request.uri()),
-                        method = %request.method(),
-                        uri = %request.uri(),
-                        version = ?request.version(),
-                    )
-                })
-                .on_response(
-                    |response: &axum::http::Response<_>,
-                     latency: std::time::Duration,
-                     span: &tracing::Span| {
-                        span.record("status", tracing::field::display(response.status()));
-                        span.record("latency", tracing::field::display(latency.as_millis()));
-                        span.record(
-                            "http.status_code",
-                            tracing::field::display(response.status().as_u16()),
-                        );
-
-                        // OpenTelemetry span status
-                        if response.status().is_success()
-                            || response.status() == StatusCode::PAYMENT_REQUIRED
-                        {
-                            span.set_status(Status::Ok);
-                        } else {
-                            span.set_status(Status::error(
-                                response
-                                    .status()
-                                    .canonical_reason()
-                                    .unwrap_or("unknown")
-                                    .to_string(),
-                            ));
-                        }
-
-                        tracing::info!(
-                            "status={} elapsed={}ms",
-                            response.status().as_u16(),
-                            latency.as_millis()
-                        );
-                    },
-                ),
         );
 
     tracing::info!("Using facilitator on {}", x402.facilitator_url());
