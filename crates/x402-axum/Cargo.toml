@@ -26,7 +26,6 @@ axum-core = { version = "0.5.2" }
 
 # Telemetry
 tracing = { version = "0.1.41", optional = true }
-x402-common = { version = "0.1.0", path = "../x402-common" }
 
 [dev-dependencies]
 axum = { version = "0.8.4" }
