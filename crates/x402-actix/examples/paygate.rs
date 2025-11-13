@@ -27,6 +27,7 @@ async fn main() -> std::io::Result<()> {
     let x402 = X402Middleware::try_from(facilitator_url)
         .unwrap()
         .with_base_url(url::Url::parse("https://localhost:3000/").unwrap())
+        .with_mime_type("text/plain")
         .with_price_tag(
             USDCDeployment::by_network(Network::SolanaDevnet)
                 .pay_to(address_sol!("EGBQqKn968sVv5cQh5Cr72pSTHfxsuzq7o7asqYB5uEV"))
