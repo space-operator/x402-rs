@@ -1,6 +1,7 @@
-use x402_rs::types::{PaymentRequiredResponse, PaymentRequirements, X402Version};
 use std::{fmt::Display, sync::LazyLock};
+use x402_rs::types::{PaymentRequiredResponse, PaymentRequirements, X402Version};
 
+#[derive(Debug)]
 pub struct X402Error(pub PaymentRequiredResponse);
 
 impl From<PaymentRequiredResponse> for X402Error {
@@ -76,5 +77,14 @@ impl X402Error {
             x402_version: X402Version::V1,
         };
         Self(payment_required_response)
+    }
+}
+
+impl actix_web::ResponseError for X402Error {
+    fn status_code(&self) -> actix_http::StatusCode {
+        actix_http::StatusCode::PAYMENT_REQUIRED
+    }
+    fn error_response(&self) -> actix_web::HttpResponse<actix_web::body::BoxBody> {
+        actix_web::HttpResponse::build(self.status_code()).json(&self.0)
     }
 }
