@@ -40,14 +40,11 @@ async fn buy_solana() -> Result<(), Box<dyn std::error::Error>> {
     // Vanilla reqwest
     let http_client = Client::new()
         .with_payments(sender)
-        .prefer(USDCDeployment::by_network(Network::Solana))
-        .max(USDCDeployment::by_network(Network::Solana).amount(0.1)?)
+        .prefer(USDCDeployment::by_network(Network::SolanaDevnet))
+        .max(USDCDeployment::by_network(Network::SolanaDevnet).amount(0.1)?)
         .build();
 
-    let response = http_client
-        .get("http://localhost:3000/protected-route")
-        .send()
-        .await?;
+    let response = http_client.get("http://localhost:3000/pay").send().await?;
 
     println!("Response: {:?}", response.text().await?);
 
@@ -58,5 +55,5 @@ async fn buy_solana() -> Result<(), Box<dyn std::error::Error>> {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
 
-    buy_evm().await
+    buy_solana().await
 }
