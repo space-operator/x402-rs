@@ -3,7 +3,7 @@ use x402_actix::{
     facilitator_client::FacilitatorClient, middleware::X402Middleware, price::IntoPriceTag,
 };
 use x402_rs::{
-    address_sol,
+    address_evm, address_sol,
     network::{Network, USDCDeployment},
 };
 
@@ -28,8 +28,14 @@ async fn main() -> std::io::Result<()> {
         .unwrap()
         .with_base_url(url::Url::parse("https://localhost:3000/").unwrap())
         .with_price_tag(
-            USDCDeployment::by_network(Network::Solana)
+            USDCDeployment::by_network(Network::SolanaDevnet)
                 .pay_to(address_sol!("EGBQqKn968sVv5cQh5Cr72pSTHfxsuzq7o7asqYB5uEV"))
+                .amount(0.0025)
+                .unwrap(),
+        )
+        .or_price_tag(
+            USDCDeployment::by_network(Network::BaseSepolia)
+                .pay_to(address_evm!("0xBAc675C310721717Cd4A37F6cbeA1F081b1C2a07"))
                 .amount(0.0025)
                 .unwrap(),
         );
