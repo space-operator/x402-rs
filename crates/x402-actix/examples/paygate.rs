@@ -22,7 +22,7 @@ async fn pay(
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let facilitator_url = "https://x402.org/facilitator".to_string();
+    let facilitator_url = "https://www.x402.org/facilitator/".to_string();
     // .unwrap_or_else(|_| "https://facilitator.x402.rs".to_string());
     let x402 = X402Middleware::try_from(facilitator_url)
         .unwrap()

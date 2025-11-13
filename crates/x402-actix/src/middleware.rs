@@ -315,10 +315,10 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,no_run
-    /// use x402_axum::X402Middleware;
+    /// ```rust,ignore
+    /// use x402_actix::middleware::X402Middleware;
     /// use x402_rs::network::{Network, USDCDeployment};
-    /// use x402_axum::IntoPriceTag;
+    /// use x402_actix::price::IntoPriceTag;
     ///
     /// let x402 = X402Middleware::try_from("https://facilitator.example.com/")
     ///     .unwrap()

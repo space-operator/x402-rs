@@ -7,7 +7,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use x402_axum::facilitator_client::FacilitatorClient;
+//! use x402_actix::facilitator_client::FacilitatorClient;
 //!
 //! let facilitator = FacilitatorClient::try_from("https://facilitator.ukstv.me/").unwrap();
 //! ```
@@ -340,3 +340,19 @@ impl TryFrom<&str> for FacilitatorClient {
         FacilitatorClient::try_new(url)
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    #[actix_web::test]
+    async fn test_official_url() {
+        let client =
+            FacilitatorClient::try_new("https://www.x402.org/facilitator/".parse().unwrap())
+                .unwrap();
+        assert_eq!(client.supported_url().to_string(), "https://www.x402.org/facilitator/supported");
+        let supported = client.supported().await.unwrap();
+        dbg!(&supported);
+    }
+}
+

@@ -89,12 +89,12 @@ where
 /// All methods clone the asset, so the trait is intended for ergonomic one-liners like:
 ///
 /// ```rust
-/// use x402_axum::price::IntoPriceTag;
+/// use x402_actix::price::IntoPriceTag;
 /// use x402_rs::network::{Network, USDCDeployment};
 ///
 /// let price_tag = USDCDeployment::by_network(Network::Base)
 ///     .amount("1.50")
-///     .pay_to("0x036CbD53842c5426634e7929541eC2318f3dCF7e")
+///     .pay_to(x402_rs::address_evm!("0x036CbD53842c5426634e7929541eC2318f3dCF7e"))
 ///     .build()
 ///     .unwrap();
 /// ```
