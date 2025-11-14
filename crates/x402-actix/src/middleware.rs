@@ -11,11 +11,7 @@ use x402_rs::{
     },
 };
 
-use crate::{
-    facilitator_client::{FacilitatorClient, FacilitatorClientError},
-    paygate::X402Paygate,
-    price::PriceTag,
-};
+use crate::{facilitator_client::FacilitatorClient, paygate::X402Paygate, price::PriceTag};
 
 /// A variant of [`PaymentRequirements`] without the `resource` field.
 /// This allows resources to be dynamically inferred per request.
