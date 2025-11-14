@@ -42,7 +42,8 @@ async fn main() {
             .app_data(web::Data::new(x402.clone()))
             .service(pay)
     })
-    .bind(("127.0.0.1", 3000))?
+    .bind(("127.0.0.1", 3000))
+    .unwrap()
     .run()
     .await
     .unwrap();
