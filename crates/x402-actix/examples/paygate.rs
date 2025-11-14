@@ -23,10 +23,12 @@ async fn pay(
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let facilitator_url = "https://www.x402.org/facilitator/".to_string();
-    // .unwrap_or_else(|_| "https://facilitator.x402.rs".to_string());
-    let x402 = X402Middleware::try_from(facilitator_url)
+    // "https://facilitator.x402.rs"
+    let facilitator = FacilitatorClient::try_new(facilitator_url.parse().unwrap()).unwrap();
+    let x402 = X402Middleware::new(facilitator)
+        .await
         .unwrap()
-        .with_base_url(url::Url::parse("https://localhost:3000/").unwrap())
+        .with_base_url("https://localhost:3000/".parse().unwrap())
         .with_mime_type("text/plain")
         .with_price_tag(
             USDCDeployment::by_network(Network::SolanaDevnet)

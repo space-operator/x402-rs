@@ -4,8 +4,11 @@ use actix_http::Uri;
 use serde_json::json;
 use url::Url;
 use x402_rs::{
+    facilitator::Facilitator,
     network::Network,
-    types::{MixedAddress, PaymentRequirements, Scheme, TokenAmount},
+    types::{
+        MixedAddress, PaymentRequirements, Scheme, SupportedPaymentKindsResponse, TokenAmount,
+    },
 };
 
 use crate::{
@@ -73,6 +76,8 @@ pub enum PaymentOffers {
 pub struct X402Middleware<F> {
     /// The facilitator used to verify and settle payments.
     facilitator: Arc<F>,
+    /// Supported networks
+    supported: SupportedPaymentKindsResponse,
     /// Optional description string passed along with payment requirements. Empty string by default.
     description: Option<String>,
     /// Optional MIME type of the protected resource. `application/json` by default.
@@ -102,9 +107,14 @@ pub struct X402Middleware<F> {
 
 impl<F> X402Middleware<F> {
     /// Creates a new middleware instance with a default configuration.
-    pub async fn new(facilitator: F) -> Self {
-        Self {
+    pub async fn new(facilitator: F) -> Result<Self, F::Error>
+    where
+        F: Facilitator,
+    {
+        let supported = facilitator.supported().await?;
+        Ok(Self {
             facilitator: Arc::new(facilitator),
+            supported,
             description: None,
             mime_type: None,
             resource: None,
@@ -115,7 +125,7 @@ impl<F> X402Middleware<F> {
             output_schema: None,
             settle_before_execution: false,
             payment_offers: Arc::new(PaymentOffers::Ready(Arc::new(Vec::new()))),
-        }
+        })
     }
 
     /// Returns the configured base URL for x402-protected resources, or `http://localhost/` if not set.
