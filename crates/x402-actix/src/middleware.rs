@@ -326,6 +326,21 @@ where
         this
     }
 
+    fn find_solana_fee_payer(&self, network: Network) -> Option<serde_json::Value> {
+        assert!(matches!(network, Network::SolanaDevnet | Network::Solana));
+        let network = network.to_string();
+        self.supported
+            .kinds
+            .iter()
+            .find(|s| s.network == network)
+            .and_then(|s| s.extra.as_ref())
+            .map(|extra| {
+                json!({
+                    "feePayer": extra.fee_payer,
+                })
+            })
+    }
+
     fn recompute_offers(mut self) -> Self {
         let base_url = self.base_url();
         let description = self.description.clone().unwrap_or_default();
@@ -360,7 +375,7 @@ where
                 price_tag.token.network(),
                 Network::SolanaDevnet | Network::Solana
             ) {
-                None
+                self.find_solana_fee_payer(price_tag.token.network())
             } else {
                 None
             };
