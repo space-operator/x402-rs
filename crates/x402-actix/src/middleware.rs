@@ -100,26 +100,9 @@ pub struct X402Middleware<F> {
     payment_offers: Arc<PaymentOffers>,
 }
 
-impl TryFrom<&str> for X402Middleware<FacilitatorClient> {
-    type Error = FacilitatorClientError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let facilitator = FacilitatorClient::try_from(value)?;
-        Ok(X402Middleware::new(facilitator))
-    }
-}
-
-impl TryFrom<String> for X402Middleware<FacilitatorClient> {
-    type Error = FacilitatorClientError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        X402Middleware::try_from(value.as_str())
-    }
-}
-
 impl<F> X402Middleware<F> {
     /// Creates a new middleware instance with a default configuration.
-    pub fn new(facilitator: F) -> Self {
+    pub async fn new(facilitator: F) -> Self {
         Self {
             facilitator: Arc::new(facilitator),
             description: None,
@@ -357,65 +340,44 @@ where
             (None, None) => None,
         };
 
-        let payment_offers = if let Some(resource) = self.resource.clone() {
-            let payment_requirements = self
-                .price_tag
-                .iter()
-                .map(|price_tag| {
-                    let extra = if let Some(eip712) = price_tag.token.eip712.clone() {
-                        Some(json!({
-                            "name": eip712.name,
-                            "version": eip712.version
-                        }))
-                    } else {
-                        None
-                    };
-                    PaymentRequirements {
-                        scheme: Scheme::Exact,
-                        network: price_tag.token.network(),
-                        max_amount_required: price_tag.amount,
-                        resource: resource.clone(),
-                        description: description.clone(),
-                        mime_type: mime_type.clone(),
-                        pay_to: price_tag.pay_to.clone(),
-                        max_timeout_seconds,
-                        asset: price_tag.token.address(),
-                        extra,
-                        output_schema: complete_output_schema.clone(),
-                    }
-                })
-                .collect::<Vec<_>>();
-            PaymentOffers::Ready(Arc::new(payment_requirements))
-        } else {
-            let no_resource = self
-                .price_tag
-                .iter()
-                .map(|price_tag| {
-                    let extra = if let Some(eip712) = price_tag.token.eip712.clone() {
-                        Some(json!({
-                            "name": eip712.name,
-                            "version": eip712.version
-                        }))
-                    } else {
-                        None
-                    };
-                    PaymentRequirementsNoResource {
-                        scheme: Scheme::Exact,
-                        network: price_tag.token.network(),
-                        max_amount_required: price_tag.amount,
-                        description: description.clone(),
-                        mime_type: mime_type.clone(),
-                        pay_to: price_tag.pay_to.clone(),
-                        max_timeout_seconds,
-                        asset: price_tag.token.address(),
-                        extra,
-                        output_schema: complete_output_schema.clone(),
-                    }
-                })
-                .collect::<Vec<_>>();
-            PaymentOffers::NoResource {
-                partial: no_resource,
+        let no_resource = self.price_tag.iter().map(|price_tag| {
+            let extra = if let Some(eip712) = price_tag.token.eip712.clone() {
+                Some(json!({
+                    "name": eip712.name,
+                    "version": eip712.version
+                }))
+            } else if matches!(
+                price_tag.token.network(),
+                Network::SolanaDevnet | Network::Solana
+            ) {
+                None
+            } else {
+                None
+            };
+            PaymentRequirementsNoResource {
+                scheme: Scheme::Exact,
+                network: price_tag.token.network(),
+                max_amount_required: price_tag.amount,
+                description: description.clone(),
+                mime_type: mime_type.clone(),
+                pay_to: price_tag.pay_to.clone(),
+                max_timeout_seconds,
+                asset: price_tag.token.address(),
+                extra,
+                output_schema: complete_output_schema.clone(),
+            }
+        });
+
+        let payment_offers = match self.resource.clone() {
+            None => PaymentOffers::NoResource {
+                partial: no_resource.collect(),
                 base_url,
+            },
+            Some(resource) => {
+                let payment_requirements = no_resource
+                    .map(|r| r.to_payment_requirements(resource.clone()))
+                    .collect();
+                PaymentOffers::Ready(Arc::new(payment_requirements))
             }
         };
         self.payment_offers = Arc::new(payment_offers);
