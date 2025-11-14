@@ -21,7 +21,7 @@ async fn pay(
 }
 
 #[actix_web::main]
-async fn main() -> std::io::Result<()> {
+async fn main() {
     let facilitator_url = "https://www.x402.org/facilitator/".to_string();
     // "https://facilitator.x402.rs"
     let facilitator = FacilitatorClient::try_new(facilitator_url.parse().unwrap()).unwrap();
@@ -45,4 +45,5 @@ async fn main() -> std::io::Result<()> {
     .bind(("127.0.0.1", 3000))?
     .run()
     .await
+    .unwrap();
 }
