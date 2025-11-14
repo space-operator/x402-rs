@@ -32,7 +32,7 @@ async fn main() {
         .with_mime_type("text/plain")
         .with_price_tag(
             USDCDeployment::by_network(Network::SolanaDevnet)
-                .pay_to(address_sol!("EGBQqKn968sVv5cQh5Cr72pSTHfxsuzq7o7asqYB5uEV"))
+                .pay_to(address_sol!("F9qRATtMLUdj11SEgZZV6QG5SK6zSTS2sEkxpRMTzE9Q"))
                 .amount(0.0025)
                 .unwrap(),
         );
