@@ -9,7 +9,7 @@ members = [
   "examples/x402-reqwest-example",
 ]
 
-[dependencies]
+[workspace.dependencies]
 # Local crates
 x402-rs = { path = "crates/x402-rs", version = "0.9.1" }
 x402-axum = { path = "crates/x402-axum", version = "0.6.1" }
