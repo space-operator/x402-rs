@@ -13,7 +13,15 @@ async fn pay(
     x402: web::Data<X402Middleware<FacilitatorClient>>,
 ) -> Result<impl Responder, actix_web::Error> {
     let uri = req.uri();
-    let paygate = x402.to_paygate(uri);
+    let paygate = x402
+        .with_mime_type("text/plain")
+        .with_price_tag(
+            USDCDeployment::by_network(Network::SolanaDevnet)
+                .pay_to(address_sol!("F9qRATtMLUdj11SEgZZV6QG5SK6zSTS2sEkxpRMTzE9Q"))
+                .amount(0.0025)
+                .unwrap(),
+        )
+        .to_paygate(uri);
     let payload = paygate.extract_payment_payload(req.headers()).await?;
     let r = paygate.verify_payment(payload).await?;
     paygate.settle_payment(&r).await?;
@@ -28,14 +36,7 @@ async fn main() {
     let x402 = X402Middleware::new(facilitator)
         .await
         .unwrap()
-        .with_base_url("https://localhost:3000/".parse().unwrap())
-        .with_mime_type("text/plain")
-        .with_price_tag(
-            USDCDeployment::by_network(Network::SolanaDevnet)
-                .pay_to(address_sol!("F9qRATtMLUdj11SEgZZV6QG5SK6zSTS2sEkxpRMTzE9Q"))
-                .amount(0.0025)
-                .unwrap(),
-        );
+        .with_base_url("https://localhost:3000/".parse().unwrap());
 
     HttpServer::new(move || {
         App::new()
