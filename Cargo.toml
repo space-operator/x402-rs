@@ -1,10 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
-  "crates/x402-axum",
-  "examples/x402-axum-example",
-  "crates/x402-reqwest",
-  "examples/x402-reqwest-example",
-  "crates/x402-actix",
   "crates/x402-rs",
+  "crates/x402-axum",
+  "crates/x402-reqwest",
+  "crates/x402-actix",
+  "examples/x402-axum-example",
+  "examples/x402-reqwest-example",
 ]
