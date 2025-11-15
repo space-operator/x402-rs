@@ -8,3 +8,14 @@ members = [
   "examples/x402-axum-example",
   "examples/x402-reqwest-example",
 ]
+
+[dependencies]
+# Local crates
+x402-rs = { path = "crates/x402-rs", version = "0.9.1" }
+x402-axum = { path = "crates/x402-axum", version = "0.6.1" }
+x402-reqwest = { path = "crates/x402-reqwest", version = "0.4.0" }
+x402-actix = { path = "crates/x402-actix", version = "0.1.0" }
+
+# Solana
+
+# Alloy
