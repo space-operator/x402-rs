@@ -269,52 +269,17 @@ impl SolanaProvider {
         let instruction = tx.instruction(instruction_index)?;
         instruction.assert_not_empty()?;
         let program_id = instruction.program_id();
-        let transfer_checked_instruction = if spl_token::ID.eq(&program_id) {
-            let token_instruction =
-                spl_token::instruction::TokenInstruction::unpack(instruction.data_slice())
-                    .map_err(|_| {
-                        FacilitatorLocalError::DecodingError(
-                            "invalid_exact_svm_payload_transaction_instructions".to_string(),
-                        )
-                    })?;
+        let transfer_checked_instruction = if spl_token_interface::check_id(&program_id) {
+            let token_instruction = spl_token_interface::instruction::TokenInstruction::unpack(
+                instruction.data_slice(),
+            )
+            .map_err(|_| {
+                FacilitatorLocalError::DecodingError(
+                    "invalid_exact_svm_payload_transaction_instructions".to_string(),
+                )
+            })?;
             let (amount, decimals) = match token_instruction {
-                spl_token::instruction::TokenInstruction::TransferChecked { amount, decimals } => {
-                    (amount, decimals)
-                }
-                _ => {
-                    return Err(FacilitatorLocalError::DecodingError(
-                        "invalid_exact_svm_payload_transaction_instructions".to_string(),
-                    ));
-                }
-            };
-            // Source = 0
-            let source = instruction.account(0)?;
-            // Mint = 1
-            let mint = instruction.account(1)?;
-            // Destination = 2
-            let destination = instruction.account(2)?;
-            // Authority = 3
-            let authority = instruction.account(3)?;
-            TransferCheckedInstruction {
-                amount,
-                decimals,
-                source,
-                mint,
-                destination,
-                authority,
-                token_program: spl_token::ID,
-                data: instruction.data(),
-            }
-        } else if spl_token_2022::ID.eq(&program_id) {
-            let token_instruction =
-                spl_token_2022::instruction::TokenInstruction::unpack(instruction.data_slice())
-                    .map_err(|_| {
-                        FacilitatorLocalError::DecodingError(
-                            "invalid_exact_svm_payload_transaction_instructions".to_string(),
-                        )
-                    })?;
-            let (amount, decimals) = match token_instruction {
-                spl_token_2022::instruction::TokenInstruction::TransferChecked {
+                spl_token_interface::instruction::TokenInstruction::TransferChecked {
                     amount,
                     decimals,
                 } => (amount, decimals),
@@ -339,7 +304,46 @@ impl SolanaProvider {
                 mint,
                 destination,
                 authority,
-                token_program: spl_token_2022::ID,
+                token_program: spl_token_interface::ID,
+                data: instruction.data(),
+            }
+        } else if spl_token_2022_interface::check_id(&program_id) {
+            let token_instruction =
+                spl_token_2022_interface::instruction::TokenInstruction::unpack(
+                    instruction.data_slice(),
+                )
+                .map_err(|_| {
+                    FacilitatorLocalError::DecodingError(
+                        "invalid_exact_svm_payload_transaction_instructions".to_string(),
+                    )
+                })?;
+            let (amount, decimals) = match token_instruction {
+                spl_token_2022_interface::instruction::TokenInstruction::TransferChecked {
+                    amount,
+                    decimals,
+                } => (amount, decimals),
+                _ => {
+                    return Err(FacilitatorLocalError::DecodingError(
+                        "invalid_exact_svm_payload_transaction_instructions".to_string(),
+                    ));
+                }
+            };
+            // Source = 0
+            let source = instruction.account(0)?;
+            // Mint = 1
+            let mint = instruction.account(1)?;
+            // Destination = 2
+            let destination = instruction.account(2)?;
+            // Authority = 3
+            let authority = instruction.account(3)?;
+            TransferCheckedInstruction {
+                amount,
+                decimals,
+                source,
+                mint,
+                destination,
+                authority,
+                token_program: spl_token_2022_interface::ID,
                 data: instruction.data(),
             }
         } else {

@@ -11,7 +11,7 @@ use solana_signature::Signature;
 use solana_keypair::Keypair;
 use solana_signer::Signer;
 use solana_transaction::versioned::VersionedTransaction;
-use spl_associated_token_account::instruction::create_associated_token_account_idempotent;
+use spl_associated_token_account_interface::instruction::create_associated_token_account_idempotent;
 use std::str::FromStr;
 use std::sync::Arc;
 use x402_rs::chain::solana::{SolanaAddress, TransactionInt};
@@ -42,25 +42,25 @@ impl SolanaSenderWallet {
         let account = self.rpc_client.get_account(&mint_address).map_err(|e| {
             X402PaymentsError::SigningError(format!("failed to fetch mint {mint_address}: {e}"))
         })?;
-        if account.owner == spl_token::id() {
-            let mint = spl_token::state::Mint::unpack(&account.data).map_err(|e| {
+        if account.owner == spl_token_interface::ID {
+            let mint = spl_token_interface::state::Mint::unpack(&account.data).map_err(|e| {
                 X402PaymentsError::SigningError(format!(
                     "failed to unpack mint {mint_address}: {e}"
                 ))
             })?;
             Ok(Mint::Token {
                 decimals: mint.decimals,
-                token_program: spl_token::id(),
+                token_program: spl_token_interface::ID,
             })
-        } else if account.owner == spl_token_2022::id() {
-            let mint = spl_token_2022::state::Mint::unpack(&account.data).map_err(|e| {
+        } else if account.owner == spl_token_2022_interface::ID {
+            let mint = spl_token_2022_interface::state::Mint::unpack(&account.data).map_err(|e| {
                 X402PaymentsError::SigningError(format!(
                     "failed to unpack mint {mint_address}: {e}",
                 ))
             })?;
             Ok(Mint::Token2022 {
                 decimals: mint.decimals,
-                token_program: spl_token_2022::id(),
+                token_program: spl_token_2022_interface::ID,
             })
         } else {
             Err(X402PaymentsError::SigningError(format!(
@@ -173,7 +173,7 @@ impl SenderWallet for SolanaSenderWallet {
                 decimals,
                 token_program,
             } => {
-                spl_token::instruction::transfer_checked(
+                spl_token_interface::instruction::transfer_checked(
                     &token_program,
                     &source_ata,
                     &asset_address,
@@ -189,7 +189,7 @@ impl SenderWallet for SolanaSenderWallet {
                 decimals,
                 token_program,
             } => {
-                spl_token_2022::instruction::transfer_checked(
+                spl_token_2022_interface::instruction::transfer_checked(
                     &token_program,
                     &source_ata,
                     &asset_address,
