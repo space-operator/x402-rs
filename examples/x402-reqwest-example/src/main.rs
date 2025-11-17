@@ -1,7 +1,7 @@
 use alloy::signers::local::PrivateKeySigner;
 use dotenvy::dotenv;
 use reqwest::Client;
-use solana_sdk::signature::Keypair;
+use solana_keypair::Keypair;
 use std::env;
 use x402_reqwest::chains::evm::EvmSenderWallet;
 use x402_reqwest::chains::solana::SolanaSenderWallet;
@@ -34,7 +34,7 @@ async fn buy_solana() -> Result<(), Box<dyn std::error::Error>> {
     let solana_private_key = env::var("SOLANA_PRIVATE_KEY")?;
     let keypair = Keypair::from_base58_string(solana_private_key.as_str());
     let solana_rpc_url = env::var("SOLANA_RPC_URL")?;
-    let rpc_client = solana_client::rpc_client::RpcClient::new(solana_rpc_url.as_str());
+    let rpc_client = solana_rpc_client::rpc_client::RpcClient::new(solana_rpc_url.as_str());
     let sender = SolanaSenderWallet::new(keypair, rpc_client);
 
     // Vanilla reqwest
