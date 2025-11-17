@@ -2,7 +2,6 @@ use alloy::signers::local::PrivateKeySigner;
 use dotenvy::dotenv;
 use reqwest::Client;
 use solana_sdk::signature::Keypair;
-use solana_sdk::signer::Signer;
 use std::env;
 use x402_reqwest::chains::evm::EvmSenderWallet;
 use x402_reqwest::chains::solana::SolanaSenderWallet;
@@ -34,7 +33,6 @@ async fn buy_evm() -> Result<(), Box<dyn std::error::Error>> {
 async fn buy_solana() -> Result<(), Box<dyn std::error::Error>> {
     let solana_private_key = env::var("SOLANA_PRIVATE_KEY")?;
     let keypair = Keypair::from_base58_string(solana_private_key.as_str());
-    println!("Payer: {}", keypair.pubkey());
     let solana_rpc_url = env::var("SOLANA_RPC_URL")?;
     let rpc_client = solana_client::rpc_client::RpcClient::new(solana_rpc_url.as_str());
     let sender = SolanaSenderWallet::new(keypair, rpc_client);
@@ -42,20 +40,16 @@ async fn buy_solana() -> Result<(), Box<dyn std::error::Error>> {
     // Vanilla reqwest
     let http_client = Client::new()
         .with_payments(sender)
-        .prefer(USDCDeployment::by_network(Network::SolanaDevnet))
-        .max(USDCDeployment::by_network(Network::SolanaDevnet).amount(0.1)?)
+        .prefer(USDCDeployment::by_network(Network::Solana))
+        .max(USDCDeployment::by_network(Network::Solana).amount(0.1)?)
         .build();
 
-    let response = http_client.get("http://localhost:3000/pay").send().await?;
+    let response = http_client
+        .get("http://localhost:3000/protected-route")
+        .send()
+        .await?;
 
-    let text = match response.headers()["content-type"].as_bytes() {
-        b"application/json" => {
-            serde_json::to_string_pretty(&response.json::<serde_json::Value>().await?).unwrap()
-        }
-        _ => response.text().await?,
-    };
-
-    println!("Response: {}", text);
+    println!("Response: {:?}", response.text().await?);
 
     Ok(())
 }
@@ -64,5 +58,5 @@ async fn buy_solana() -> Result<(), Box<dyn std::error::Error>> {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
 
-    buy_solana().await
+    buy_evm().await
 }

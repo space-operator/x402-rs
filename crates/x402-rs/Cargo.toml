@@ -1,6 +1,6 @@
 [package]
 name = "x402-rs"
-version = "0.9.1"
+version = "0.9.2"
 authors = ["Sergey Ukustov <sergey@ukstv.me>"]
 edition = "2024"
 license = "Apache-2.0"
@@ -50,5 +50,4 @@ opentelemetry-otlp = { version = "0.30.0", features = ["metrics", "grpc-tonic"] 
 opentelemetry-stdout = { version = "0.30.0", features = ["trace", "metrics"] }
 
 [features]
-default = []
 telemetry = []
