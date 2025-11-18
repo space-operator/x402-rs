@@ -123,29 +123,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
-name = "alloy"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a83b2001153fdb12999f808b53068ba36902ca59bf32ad979bb176d03f8f8772"
-dependencies = [
- "alloy-consensus",
- "alloy-contract",
- "alloy-core",
- "alloy-eips",
- "alloy-genesis",
- "alloy-network",
- "alloy-provider",
- "alloy-rpc-client",
- "alloy-rpc-types",
- "alloy-serde",
- "alloy-signer",
- "alloy-signer-local",
- "alloy-transport",
- "alloy-transport-http",
- "alloy-trie",
-]
-
-[[package]]
 name = "alloy-chains"
 version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -217,19 +194,6 @@ dependencies = [
  "futures-util",
  "serde_json",
  "thiserror 2.0.17",
-]
-
-[[package]]
-name = "alloy-core"
-version = "1.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ca96214615ec8cf3fa2a54b32f486eb49100ca7fe7eb0b8c1137cd316e7250a"
-dependencies = [
- "alloy-dyn-abi",
- "alloy-json-abi",
- "alloy-primitives",
- "alloy-rlp",
- "alloy-sol-types",
 ]
 
 [[package]]
@@ -307,21 +271,6 @@ dependencies = [
  "serde_with",
  "sha2",
  "thiserror 2.0.17",
-]
-
-[[package]]
-name = "alloy-genesis"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b90be17e9760a6ba6d13cebdb049cea405ebc8bf57d90664ed708cc5bc348342"
-dependencies = [
- "alloy-eips",
- "alloy-primitives",
- "alloy-serde",
- "alloy-trie",
- "borsh",
- "serde",
- "serde_with",
 ]
 
 [[package]]
@@ -6713,7 +6662,10 @@ dependencies = [
 name = "x402-reqwest"
 version = "0.4.0"
 dependencies = [
- "alloy",
+ "alloy-primitives",
+ "alloy-signer",
+ "alloy-signer-local",
+ "alloy-sol-types",
  "async-trait",
  "bincode",
  "http",
@@ -6746,7 +6698,7 @@ dependencies = [
 name = "x402-reqwest-example"
 version = "0.0.0"
 dependencies = [
- "alloy",
+ "alloy-signer-local",
  "dotenvy",
  "reqwest",
  "solana-keypair",
