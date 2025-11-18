@@ -1,15 +1,17 @@
 use async_trait::async_trait;
-use solana_client::rpc_client::RpcClient;
-use solana_client::rpc_config::RpcSimulateTransactionConfig;
-use solana_sdk::compute_budget::ComputeBudgetInstruction;
-use solana_sdk::hash::Hash;
-use solana_sdk::instruction::Instruction;
-use solana_sdk::message::{VersionedMessage, v0::Message as MessageV0};
-use solana_sdk::program_pack::Pack;
-use solana_sdk::pubkey::Pubkey;
-use solana_sdk::signature::{Keypair, Signature, Signer};
-use solana_sdk::transaction::VersionedTransaction;
-use spl_associated_token_account::instruction::create_associated_token_account_idempotent;
+use solana_rpc_client::rpc_client::RpcClient;
+use solana_rpc_client_api::config::RpcSimulateTransactionConfig;
+use solana_compute_budget_interface::ComputeBudgetInstruction;
+use solana_hash::Hash;
+use solana_instruction::Instruction;
+use solana_message::{VersionedMessage, v0::Message as MessageV0};
+use solana_program_pack::Pack;
+use solana_pubkey::Pubkey;
+use solana_signature::Signature;
+use solana_keypair::Keypair;
+use solana_signer::Signer;
+use solana_transaction::versioned::VersionedTransaction;
+use spl_associated_token_account_interface::instruction::create_associated_token_account_idempotent;
 use std::str::FromStr;
 use std::sync::Arc;
 use x402_rs::chain::solana::{SolanaAddress, TransactionInt};
@@ -40,25 +42,25 @@ impl SolanaSenderWallet {
         let account = self.rpc_client.get_account(&mint_address).map_err(|e| {
             X402PaymentsError::SigningError(format!("failed to fetch mint {mint_address}: {e}"))
         })?;
-        if account.owner == spl_token::id() {
-            let mint = spl_token::state::Mint::unpack(&account.data).map_err(|e| {
+        if account.owner == spl_token_interface::ID {
+            let mint = spl_token_interface::state::Mint::unpack(&account.data).map_err(|e| {
                 X402PaymentsError::SigningError(format!(
                     "failed to unpack mint {mint_address}: {e}"
                 ))
             })?;
             Ok(Mint::Token {
                 decimals: mint.decimals,
-                token_program: spl_token::id(),
+                token_program: spl_token_interface::ID,
             })
-        } else if account.owner == spl_token_2022::id() {
-            let mint = spl_token_2022::state::Mint::unpack(&account.data).map_err(|e| {
+        } else if account.owner == spl_token_2022_interface::ID {
+            let mint = spl_token_2022_interface::state::Mint::unpack(&account.data).map_err(|e| {
                 X402PaymentsError::SigningError(format!(
                     "failed to unpack mint {mint_address}: {e}",
                 ))
             })?;
             Ok(Mint::Token2022 {
                 decimals: mint.decimals,
-                token_program: spl_token_2022::id(),
+                token_program: spl_token_2022_interface::ID,
             })
         } else {
             Err(X402PaymentsError::SigningError(format!(
@@ -171,7 +173,7 @@ impl SenderWallet for SolanaSenderWallet {
                 decimals,
                 token_program,
             } => {
-                spl_token::instruction::transfer_checked(
+                spl_token_interface::instruction::transfer_checked(
                     &token_program,
                     &source_ata,
                     &asset_address,
@@ -187,7 +189,7 @@ impl SenderWallet for SolanaSenderWallet {
                 decimals,
                 token_program,
             } => {
-                spl_token_2022::instruction::transfer_checked(
+                spl_token_2022_interface::instruction::transfer_checked(
                     &token_program,
                     &source_ata,
                     &asset_address,
@@ -347,7 +349,7 @@ pub fn get_priority_fee_micro_lamports(
 /// Update the first set_compute_unit_limit ix if it exists, else append a new one.
 pub fn update_or_append_set_compute_unit_limit(ixs: &mut Vec<Instruction>, units: u32) {
     // opcode 0x02 = SetComputeUnitLimit
-    let target_program = solana_sdk::compute_budget::id();
+    let target_program = solana_compute_budget_interface::ID;
     let new_ix = ComputeBudgetInstruction::set_compute_unit_limit(units);
 
     // find first ix targeting the ComputeBudget program with opcode=2

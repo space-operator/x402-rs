@@ -1,12 +1,12 @@
-use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_client::rpc_config::{RpcSendTransactionConfig, RpcSimulateTransactionConfig};
 use solana_commitment_config::CommitmentConfig;
-use solana_sdk::instruction::CompiledInstruction;
-use solana_sdk::pubkey;
-use solana_sdk::pubkey::Pubkey;
-use solana_sdk::signature::{Keypair, Signature};
-use solana_sdk::signer::Signer;
-use solana_sdk::transaction::VersionedTransaction;
+use solana_keypair::Keypair;
+use solana_message::compiled_instruction::CompiledInstruction;
+use solana_pubkey::{Pubkey, pubkey};
+use solana_rpc_client::nonblocking::rpc_client::RpcClient;
+use solana_rpc_client_api::config::{RpcSendTransactionConfig, RpcSimulateTransactionConfig};
+use solana_signature::Signature;
+use solana_signer::Signer;
+use solana_transaction::versioned::VersionedTransaction;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use std::time::Duration;
@@ -138,7 +138,7 @@ impl SolanaProvider {
                     "invalid_exact_svm_payload_transaction_instructions_length".to_string(),
                 ))?;
         let account = instruction.program_id(transaction.message.static_account_keys());
-        let compute_budget = solana_sdk::compute_budget::ID;
+        let compute_budget = solana_compute_budget_interface::ID;
         let data = instruction.data.as_slice();
 
         // Verify program ID, discriminator, and data length (1 byte discriminator + 4 bytes u32)
@@ -171,7 +171,7 @@ impl SolanaProvider {
                         .to_string(),
                 ))?;
         let account = instruction.program_id(transaction.message.static_account_keys());
-        let compute_budget = solana_sdk::compute_budget::ID;
+        let compute_budget = solana_compute_budget_interface::ID;
         let data = instruction.data.as_slice();
         if compute_budget.ne(account) || data.first().cloned().unwrap_or(0) != 3 || data.len() != 9
         {
@@ -269,52 +269,17 @@ impl SolanaProvider {
         let instruction = tx.instruction(instruction_index)?;
         instruction.assert_not_empty()?;
         let program_id = instruction.program_id();
-        let transfer_checked_instruction = if spl_token::ID.eq(&program_id) {
-            let token_instruction =
-                spl_token::instruction::TokenInstruction::unpack(instruction.data_slice())
-                    .map_err(|_| {
-                        FacilitatorLocalError::DecodingError(
-                            "invalid_exact_svm_payload_transaction_instructions".to_string(),
-                        )
-                    })?;
+        let transfer_checked_instruction = if spl_token_interface::check_id(&program_id) {
+            let token_instruction = spl_token_interface::instruction::TokenInstruction::unpack(
+                instruction.data_slice(),
+            )
+            .map_err(|_| {
+                FacilitatorLocalError::DecodingError(
+                    "invalid_exact_svm_payload_transaction_instructions".to_string(),
+                )
+            })?;
             let (amount, decimals) = match token_instruction {
-                spl_token::instruction::TokenInstruction::TransferChecked { amount, decimals } => {
-                    (amount, decimals)
-                }
-                _ => {
-                    return Err(FacilitatorLocalError::DecodingError(
-                        "invalid_exact_svm_payload_transaction_instructions".to_string(),
-                    ));
-                }
-            };
-            // Source = 0
-            let source = instruction.account(0)?;
-            // Mint = 1
-            let mint = instruction.account(1)?;
-            // Destination = 2
-            let destination = instruction.account(2)?;
-            // Authority = 3
-            let authority = instruction.account(3)?;
-            TransferCheckedInstruction {
-                amount,
-                decimals,
-                source,
-                mint,
-                destination,
-                authority,
-                token_program: spl_token::ID,
-                data: instruction.data(),
-            }
-        } else if spl_token_2022::ID.eq(&program_id) {
-            let token_instruction =
-                spl_token_2022::instruction::TokenInstruction::unpack(instruction.data_slice())
-                    .map_err(|_| {
-                        FacilitatorLocalError::DecodingError(
-                            "invalid_exact_svm_payload_transaction_instructions".to_string(),
-                        )
-                    })?;
-            let (amount, decimals) = match token_instruction {
-                spl_token_2022::instruction::TokenInstruction::TransferChecked {
+                spl_token_interface::instruction::TokenInstruction::TransferChecked {
                     amount,
                     decimals,
                 } => (amount, decimals),
@@ -339,7 +304,46 @@ impl SolanaProvider {
                 mint,
                 destination,
                 authority,
-                token_program: spl_token_2022::ID,
+                token_program: spl_token_interface::ID,
+                data: instruction.data(),
+            }
+        } else if spl_token_2022_interface::check_id(&program_id) {
+            let token_instruction =
+                spl_token_2022_interface::instruction::TokenInstruction::unpack(
+                    instruction.data_slice(),
+                )
+                .map_err(|_| {
+                    FacilitatorLocalError::DecodingError(
+                        "invalid_exact_svm_payload_transaction_instructions".to_string(),
+                    )
+                })?;
+            let (amount, decimals) = match token_instruction {
+                spl_token_2022_interface::instruction::TokenInstruction::TransferChecked {
+                    amount,
+                    decimals,
+                } => (amount, decimals),
+                _ => {
+                    return Err(FacilitatorLocalError::DecodingError(
+                        "invalid_exact_svm_payload_transaction_instructions".to_string(),
+                    ));
+                }
+            };
+            // Source = 0
+            let source = instruction.account(0)?;
+            // Mint = 1
+            let mint = instruction.account(1)?;
+            // Destination = 2
+            let destination = instruction.account(2)?;
+            // Authority = 3
+            let authority = instruction.account(3)?;
+            TransferCheckedInstruction {
+                amount,
+                decimals,
+                source,
+                mint,
+                destination,
+                authority,
+                token_program: spl_token_2022_interface::ID,
                 data: instruction.data(),
             }
         } else {

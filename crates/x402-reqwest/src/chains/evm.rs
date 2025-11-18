@@ -1,9 +1,9 @@
 use crate::X402PaymentsError;
 use crate::chains::{IntoSenderWallet, SenderWallet};
-use alloy::primitives::FixedBytes;
-use alloy::signers::Signer;
-use alloy::signers::local::PrivateKeySigner;
-use alloy::sol_types::{SolStruct, eip712_domain};
+use alloy_primitives::FixedBytes;
+use alloy_signer::Signer;
+use alloy_signer_local::PrivateKeySigner;
+use alloy_sol_types::{SolStruct, eip712_domain};
 use async_trait::async_trait;
 use rand::{Rng, rng};
 use std::sync::Arc;
