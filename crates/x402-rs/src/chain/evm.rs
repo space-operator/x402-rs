@@ -14,25 +14,24 @@
 //! - Settlement is atomic: deploy (if needed) + transfer happen in a single user flow.
 //! - Verification does not persist state.
 
-use alloy::contract::SolCallBuilder;
-use alloy::dyn_abi::SolType;
-use alloy::network::{
-    Ethereum as AlloyEthereum, EthereumWallet, NetworkWallet, TransactionBuilder,
-};
-use alloy::primitives::{Address, Bytes, FixedBytes, U256, address};
-use alloy::providers::ProviderBuilder;
-use alloy::providers::bindings::IMulticall3;
-use alloy::providers::fillers::NonceManager;
-use alloy::providers::fillers::{
+use alloy_contract::SolCallBuilder;
+use alloy_dyn_abi::SolType;
+use alloy_network::{Ethereum as AlloyEthereum, EthereumWallet, NetworkWallet, TransactionBuilder};
+use alloy_primitives::hex;
+use alloy_primitives::{Address, Bytes, FixedBytes, U256, address};
+use alloy_provider::ProviderBuilder;
+use alloy_provider::bindings::IMulticall3;
+use alloy_provider::fillers::NonceManager;
+use alloy_provider::fillers::{
     BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
 };
-use alloy::providers::{
+use alloy_provider::{
     Identity, MULTICALL3_ADDRESS, MulticallItem, Provider, RootProvider, WalletProvider,
 };
-use alloy::rpc::client::RpcClient;
-use alloy::rpc::types::{TransactionReceipt, TransactionRequest};
-use alloy::sol_types::{Eip712Domain, SolCall, SolStruct, eip712_domain};
-use alloy::{hex, sol};
+use alloy_rpc_client::RpcClient;
+use alloy_rpc_types::{TransactionReceipt, TransactionRequest};
+use alloy_sol_types::sol;
+use alloy_sol_types::{Eip712Domain, SolCall, SolStruct, eip712_domain};
 use async_trait::async_trait;
 use dashmap::DashMap;
 use std::sync::Arc;
@@ -73,7 +72,7 @@ sol! {
 
 /// Signature verifier for EIP-6492, EIP-1271, EOA, universally deployed on the supported EVM chains
 /// If absent on a target chain, verification will fail; you should deploy the validator there.
-const VALIDATOR_ADDRESS: alloy::primitives::Address =
+const VALIDATOR_ADDRESS: alloy_primitives::Address =
     address!("0xdAcD51A54883eb67D95FAEb2BBfdC4a9a6BD2a3B");
 
 /// Combined filler type for gas, blob gas, nonce, and chain ID.
@@ -209,7 +208,10 @@ impl EvmProvider {
             GasFiller,
             JoinFill::new(
                 BlobGasFiller,
-                JoinFill::new(NonceFiller::new(nonce_manager.clone()), ChainIdFiller::default()),
+                JoinFill::new(
+                    NonceFiller::new(nonce_manager.clone()),
+                    ChainIdFiller::default(),
+                ),
             ),
         );
 
@@ -356,7 +358,7 @@ impl MetaEvmProvider for EvmProvider {
             std::env::var("TX_RECEIPT_TIMEOUT_SECS")
                 .ok()
                 .and_then(|s| s.parse().ok())
-                .unwrap_or(30)
+                .unwrap_or(30),
         );
 
         let watcher = pending_tx
@@ -684,9 +686,9 @@ pub struct TransferWithAuthorization0Call<P> {
     /// The prepared call builder that can be `.call()`ed or `.send()`ed.
     pub tx: SolCallBuilder<P, USDC::transferWithAuthorization_0Call>,
     /// The sender (`from`) address for the authorization.
-    pub from: alloy::primitives::Address,
+    pub from: alloy_primitives::Address,
     /// The recipient (`to`) address for the authorization.
-    pub to: alloy::primitives::Address,
+    pub to: alloy_primitives::Address,
     /// The amount to transfer (value).
     pub value: U256,
     /// Start of the validity window (inclusive).
@@ -698,7 +700,7 @@ pub struct TransferWithAuthorization0Call<P> {
     /// EIP-712 signature for the transfer authorization.
     pub signature: Bytes,
     /// Address of the token contract used for this transfer.
-    pub contract_address: alloy::primitives::Address,
+    pub contract_address: alloy_primitives::Address,
 }
 
 /// Validates that the current time is within the `validAfter` and `validBefore` bounds.
@@ -1016,7 +1018,7 @@ enum StructuredSignature {
     /// An EIP-6492 wrapped signature.
     EIP6492 {
         /// Factory contract that can deploy the wallet deterministically
-        factory: alloy::primitives::Address,
+        factory: alloy_primitives::Address,
         /// Calldata to invoke on the factory (often a CREATE2 deployment).
         factory_calldata: Bytes,
         /// Inner signature for the wallet itself, probably EIP-1271.
@@ -1032,7 +1034,7 @@ enum StructuredSignature {
 #[derive(Debug, Clone)]
 struct SignedMessage {
     /// Expected signer (an EOA or contract wallet).
-    address: alloy::primitives::Address,
+    address: alloy_primitives::Address,
     /// 32-byte digest that was signed (typically an EIP-712 hash).
     hash: FixedBytes<32>,
     /// Structured signature, either EIP-6492 or EIP-1271.
@@ -1171,7 +1173,7 @@ impl TryFrom<Vec<u8>> for StructuredSignature {
 #[derive(Clone, Debug, Default)]
 pub struct PendingNonceManager {
     /// Cache of nonces per address. Each address has its own mutex-protected nonce value.
-    nonces: Arc<DashMap<alloy::primitives::Address, Arc<Mutex<u64>>>>,
+    nonces: Arc<DashMap<alloy_primitives::Address, Arc<Mutex<u64>>>>,
 }
 
 #[async_trait]
@@ -1179,11 +1181,11 @@ impl NonceManager for PendingNonceManager {
     async fn get_next_nonce<P, N>(
         &self,
         provider: &P,
-        address: alloy::primitives::Address,
-    ) -> alloy::transports::TransportResult<u64>
+        address: alloy_primitives::Address,
+    ) -> alloy_transport::TransportResult<u64>
     where
         P: Provider<N>,
-        N: alloy::network::Network,
+        N: alloy_network::Network,
     {
         // Use `u64::MAX` as a sentinel value to indicate that the nonce has not been fetched yet.
         const NONE: u64 = u64::MAX;
@@ -1231,7 +1233,7 @@ impl PendingNonceManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::primitives::address;
+    use alloy_primitives::address;
 
     #[tokio::test]
     async fn test_reset_nonce_clears_cache() {

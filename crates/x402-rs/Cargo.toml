@@ -23,12 +23,23 @@ serde = { version = "1.0.219", features = ["derive"] }
 once_cell = { version = "1.21.3" }
 regex = { version = "1.11.1" }
 url = { version = "2.5.4", features = ["serde"] }
-alloy = { version = "1.0.7" }
 thiserror = { version = "2.0.12" }
 base64 = { version = "0.22.1" }
 rust_decimal = { version = "1.37.1" }
 async-trait = { version = "0.1.88" }
 dashmap = { version = "6.1.0" }
+
+# Alloy
+alloy-provider.workspace = true
+alloy-primitives.workspace = true
+alloy-rpc-client.workspace = true
+alloy-rpc-types.workspace = true
+alloy-network.workspace = true
+alloy-contract.workspace = true
+alloy-sol-types.workspace = true
+alloy-dyn-abi.workspace = true
+alloy-signer-local.workspace = true
+alloy-transport.workspace = true
 
 # Solana
 solana-pubkey.workspace = true

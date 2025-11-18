@@ -1,6 +1,6 @@
 use crate::network::Network;
-use alloy::network::EthereumWallet;
-use alloy::signers::local::PrivateKeySigner;
+use alloy_network::EthereumWallet;
+use alloy_signer_local::PrivateKeySigner;
 use serde::Deserialize;
 use serde::Serialize;
 use solana_keypair::Keypair;
@@ -109,8 +109,8 @@ impl SignerType {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::network::{Ethereum as AlloyEthereum, NetworkWallet};
-    use alloy::signers::local::PrivateKeySigner;
+    use alloy_network::{Ethereum as AlloyEthereum, NetworkWallet};
+    use alloy_signer_local::PrivateKeySigner;
     use std::str::FromStr;
     use std::sync::Mutex;
 
