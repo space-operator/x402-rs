@@ -78,8 +78,6 @@ pub struct X402Middleware<F> {
     mime_type: Option<String>,
     /// Optional resource URL. If not set, it will be derived from a request URI.
     resource: Option<Url>,
-    /// Optional base URL for computing full resource URLs if `resource` is not set, see [`X402Middleware::resource`].
-    base_url: Option<Url>,
     /// List of price tags accepted for this endpoint.
     price_tag: Vec<PriceTag>,
     /// Timeout in seconds for payment settlement.
@@ -112,7 +110,6 @@ impl<F> X402Middleware<F> {
             description: None,
             mime_type: None,
             resource: None,
-            base_url: None,
             max_timeout_seconds: 300,
             price_tag: Vec::new(),
             input_schema: None,
@@ -120,13 +117,6 @@ impl<F> X402Middleware<F> {
             settle_before_execution: false,
             payment_offers: Arc::new(PaymentOffers::Ready(Arc::new(Vec::new()))),
         })
-    }
-
-    /// Returns the configured base URL for x402-protected resources, or `http://localhost/` if not set.
-    pub fn base_url(&self) -> Url {
-        self.base_url
-            .clone()
-            .unwrap_or(Url::parse("http://localhost/").unwrap())
     }
 }
 
@@ -181,19 +171,6 @@ where
     pub fn with_resource(&self, resource: Url) -> Self {
         let mut this = self.clone();
         this.resource = Some(resource);
-        this.recompute_offers()
-    }
-
-    /// Sets the base URL used to construct resource URLs dynamically.
-    ///
-    /// Note: If [`with_resource`] is not called, this base URL is combined with
-    /// each request's path/query to compute the resource. If not set, defaults to `http://localhost/`.
-    ///
-    /// ⚠️ In production, prefer calling `with_resource` or setting a precise `base_url` to avoid accidental localhost fallback.
-    #[allow(dead_code)] // Public for consumption by downstream crates.
-    pub fn with_base_url(&self, base_url: Url) -> Self {
-        let mut this = self.clone();
-        this.base_url = Some(base_url);
         this.recompute_offers()
     }
 
