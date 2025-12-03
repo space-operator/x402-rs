@@ -1,6 +1,5 @@
 use std::{collections::HashSet, sync::Arc};
 
-use actix_http::Uri;
 use serde_json::json;
 use url::Url;
 use x402_rs::{
@@ -59,7 +58,6 @@ pub enum PaymentOffers {
     /// [`PaymentRequirements`] lacking `resource`, to be added per request.
     NoResource {
         partial: Vec<PaymentRequirementsNoResource>,
-        base_url: Url,
     },
 }
 
@@ -134,23 +132,17 @@ impl<F> X402Middleware<F> {
 
 fn gather_payment_requirements(
     payment_offers: &PaymentOffers,
-    req_uri: &Uri,
+    req_url: &Url,
 ) -> Arc<Vec<PaymentRequirements>> {
     match payment_offers {
         PaymentOffers::Ready(requirements) => {
             // requirements is &Arc<Vec<PaymentRequirements>>
             Arc::clone(requirements)
         }
-        PaymentOffers::NoResource { partial, base_url } => {
-            let resource = {
-                let mut resource_url = base_url.clone();
-                resource_url.set_path(req_uri.path());
-                resource_url.set_query(req_uri.query());
-                resource_url
-            };
+        PaymentOffers::NoResource { partial } => {
             let payment_requirements = partial
                 .iter()
-                .map(|partial| partial.to_payment_requirements(resource.clone()))
+                .map(|partial| partial.to_payment_requirements(req_url.clone()))
                 .collect::<Vec<_>>();
             Arc::new(payment_requirements)
         }
@@ -161,8 +153,8 @@ impl<F> X402Middleware<F>
 where
     F: Clone,
 {
-    pub fn to_paygate(&self, uri: &Uri) -> X402Paygate<F> {
-        let payment_requirements = gather_payment_requirements(&self.payment_offers, uri);
+    pub fn to_paygate(&self, url: &Url) -> X402Paygate<F> {
+        let payment_requirements = gather_payment_requirements(&self.payment_offers, url);
         X402Paygate {
             facilitator: self.facilitator.clone(),
             payment_requirements,
@@ -338,7 +330,6 @@ where
     }
 
     fn recompute_offers(mut self) -> Self {
-        let base_url = self.base_url();
         let description = self.description.clone().unwrap_or_default();
         let mime_type = self
             .mime_type
@@ -392,7 +383,6 @@ where
         let payment_offers = match self.resource.clone() {
             None => PaymentOffers::NoResource {
                 partial: no_resource.collect(),
-                base_url,
             },
             Some(resource) => {
                 let payment_requirements = no_resource

@@ -12,7 +12,7 @@ async fn pay(
     req: actix_web::HttpRequest,
     x402: web::Data<X402Middleware<FacilitatorClient>>,
 ) -> Result<impl Responder, actix_web::Error> {
-    let uri = req.uri();
+    let url = req.full_url();
     let paygate = x402
         .with_mime_type("text/plain")
         .with_price_tag(
@@ -21,7 +21,7 @@ async fn pay(
                 .amount(0.0025)
                 .unwrap(),
         )
-        .to_paygate(uri);
+        .to_paygate(&url);
     let payload = paygate.extract_payment_payload(req.headers()).await?;
     let r = paygate.verify_payment(payload).await?;
     paygate.settle_payment(&r).await?;
