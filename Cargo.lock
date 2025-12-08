@@ -7333,6 +7333,7 @@ dependencies = [
  "base64",
  "bincode",
  "bs58",
+ "cdp-sdk",
  "dashmap",
  "dotenvy",
  "once_cell",
