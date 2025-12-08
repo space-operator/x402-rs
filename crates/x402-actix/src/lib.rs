@@ -1,4 +1,5 @@
 pub mod facilitator_client;
+pub mod cdp_facilitator_client;
 pub mod price;
 pub mod middleware;
 pub mod paygate;
