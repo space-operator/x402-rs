@@ -30,3 +30,25 @@ impl Facilitator for CdpFacilitatorClient {
         Ok(resp.into_inner().into())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use cdp_sdk::{CDP_BASE_URL, Client, auth::WalletAuth};
+    use reqwest_middleware::ClientBuilder;
+
+    use super::*;
+    #[tokio::test]
+    async fn test_cdp_client() {
+        let wallet_auth = WalletAuth::builder().build().unwrap();
+
+        let http_client = ClientBuilder::new(reqwest::Client::new())
+            .with(wallet_auth)
+            .build();
+
+        let client = Client::new_with_client(CDP_BASE_URL, http_client);
+
+        let fac = CdpFacilitatorClient { client };
+        let supported = fac.supported().await.unwrap();
+        dbg!(supported);
+    }
+}
