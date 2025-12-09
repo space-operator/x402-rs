@@ -35,6 +35,16 @@ pub enum X402Version {
     V1,
 }
 
+impl From<cdp_sdk::types::X402Version> for X402Version {
+    fn from(value: cdp_sdk::types::X402Version) -> Self {
+        if *value == 1 {
+            Self::V1
+        } else {
+            unimplemented!();
+        }
+    }
+}
+
 impl Serialize for X402Version {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
@@ -89,6 +99,14 @@ impl<'de> Deserialize<'de> for X402Version {
 #[serde(rename_all = "lowercase")]
 pub enum Scheme {
     Exact,
+}
+
+impl From<cdp_sdk::types::X402SupportedPaymentKindScheme> for Scheme {
+    fn from(value: cdp_sdk::types::X402SupportedPaymentKindScheme) -> Self {
+        match value {
+            cdp_sdk::types::X402SupportedPaymentKindScheme::Exact => Self::Exact,
+        }
+    }
 }
 
 impl Display for Scheme {
@@ -1401,6 +1419,17 @@ pub struct SupportedPaymentKind {
     pub extra: Option<SupportedPaymentKindExtra>,
 }
 
+impl From<cdp_sdk::types::X402SupportedPaymentKind> for SupportedPaymentKind {
+    fn from(value: cdp_sdk::types::X402SupportedPaymentKind) -> Self {
+        Self {
+            x402_version: value.x402_version.into(),
+            scheme: value.scheme.into(),
+            network: value.network.to_string(),
+            extra: serde_json::from_value(value.extra.into()).ok(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SupportedPaymentKindExtra {
@@ -1412,6 +1441,14 @@ pub struct SupportedPaymentKindExtra {
 #[allow(dead_code)] // Public for consumption by downstream crates.
 pub struct SupportedPaymentKindsResponse {
     pub kinds: Vec<SupportedPaymentKind>,
+}
+
+impl From<cdp_sdk::types::SupportedX402PaymentKindsResponse> for SupportedPaymentKindsResponse {
+    fn from(value: cdp_sdk::types::SupportedX402PaymentKindsResponse) -> Self {
+        Self {
+            kinds: value.kinds.into_iter().map(Into::into).collect(),
+        }
+    }
 }
 
 sol!(
