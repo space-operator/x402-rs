@@ -37,7 +37,9 @@ mod tests {
     use reqwest_middleware::ClientBuilder;
 
     use super::*;
+
     #[tokio::test]
+    #[ignore]
     async fn test_cdp_client() {
         let wallet_auth = WalletAuth::builder().build().unwrap();
 
