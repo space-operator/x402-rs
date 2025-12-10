@@ -11,6 +11,10 @@ use alloy_primitives::{Bytes, U256, hex};
 use alloy_sol_types::sol;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as b64;
+use cdp_sdk::types::{
+    X402ExactEvmPayloadAuthorizationFrom, X402ExactEvmPayloadAuthorizationTo,
+    X402PaymentRequirementsAsset, X402PaymentRequirementsPayTo,
+};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rust_decimal::Decimal;
@@ -33,6 +37,14 @@ use crate::timestamp::UnixTimestamp;
 pub enum X402Version {
     /// Version `1`.
     V1,
+}
+
+impl From<X402Version> for cdp_sdk::types::X402Version {
+    fn from(value: X402Version) -> Self {
+        match value {
+            X402Version::V1 => Self::try_from(1).unwrap(),
+        }
+    }
 }
 
 impl From<cdp_sdk::types::X402Version> for X402Version {
@@ -99,6 +111,22 @@ impl<'de> Deserialize<'de> for X402Version {
 #[serde(rename_all = "lowercase")]
 pub enum Scheme {
     Exact,
+}
+
+impl From<Scheme> for cdp_sdk::types::X402PaymentRequirementsScheme {
+    fn from(value: Scheme) -> Self {
+        match value {
+            Scheme::Exact => Self::Exact,
+        }
+    }
+}
+
+impl From<Scheme> for cdp_sdk::types::X402PaymentPayloadScheme {
+    fn from(value: Scheme) -> Self {
+        match value {
+            Scheme::Exact => Self::Exact,
+        }
+    }
 }
 
 impl From<cdp_sdk::types::X402SupportedPaymentKindScheme> for Scheme {
@@ -169,6 +197,12 @@ impl Serialize for EvmSignature {
     {
         let hex_string = format!("0x{}", hex::encode(self.0.clone()));
         serializer.serialize_str(&hex_string)
+    }
+}
+
+impl Display for EvmSignature {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        self.serialize(f)
     }
 }
 
@@ -270,6 +304,12 @@ impl Serialize for HexEncodedNonce {
     }
 }
 
+impl Display for HexEncodedNonce {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        self.serialize(f)
+    }
+}
+
 /// EIP-712 structured data for ERC-3009-based authorization.
 /// Defines who can transfer how much USDC and when.
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
@@ -283,6 +323,29 @@ pub struct ExactEvmPayloadAuthorization {
     pub nonce: HexEncodedNonce,
 }
 
+impl TryFrom<ExactEvmPayloadAuthorization> for cdp_sdk::types::X402ExactEvmPayloadAuthorization {
+    type Error = FacilitatorErrorReason;
+
+    fn try_from(value: ExactEvmPayloadAuthorization) -> Result<Self, Self::Error> {
+        Ok(Self {
+            from: value
+                .from
+                .to_string()
+                .parse::<X402ExactEvmPayloadAuthorizationFrom>()
+                .map_err(|error| FacilitatorErrorReason::FreeForm(error.to_string()))?,
+            nonce: value.nonce.to_string(),
+            to: value
+                .to
+                .to_string()
+                .parse::<X402ExactEvmPayloadAuthorizationTo>()
+                .map_err(|error| FacilitatorErrorReason::FreeForm(error.to_string()))?,
+            valid_after: value.valid_after.to_string(),
+            valid_before: value.valid_before.to_string(),
+            value: value.value.to_string(),
+        })
+    }
+}
+
 /// Full payload required to authorize an ERC-3009 transfer:
 /// includes the signature and the EIP-712 struct.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -292,10 +355,29 @@ pub struct ExactEvmPayload {
     pub authorization: ExactEvmPayloadAuthorization,
 }
 
+impl TryFrom<ExactEvmPayload> for cdp_sdk::types::X402ExactEvmPayload {
+    type Error = FacilitatorErrorReason;
+
+    fn try_from(value: ExactEvmPayload) -> Result<Self, Self::Error> {
+        Ok(Self {
+            signature: value.signature.to_string(),
+            authorization: value.authorization.try_into()?,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExactSolanaPayload {
     pub transaction: String,
+}
+
+impl From<ExactSolanaPayload> for cdp_sdk::types::X402ExactSolanaPayload {
+    fn from(value: ExactSolanaPayload) -> Self {
+        Self {
+            transaction: value.transaction,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -303,6 +385,21 @@ pub struct ExactSolanaPayload {
 pub enum ExactPaymentPayload {
     Evm(ExactEvmPayload),
     Solana(ExactSolanaPayload),
+}
+
+impl TryFrom<ExactPaymentPayload> for cdp_sdk::types::X402PaymentPayloadPayload {
+    type Error = FacilitatorErrorReason;
+
+    fn try_from(value: ExactPaymentPayload) -> Result<Self, Self::Error> {
+        Ok(match value {
+            ExactPaymentPayload::Evm(exact_evm_payload) => {
+                Self::EvmPayload(exact_evm_payload.try_into()?)
+            }
+            ExactPaymentPayload::Solana(exact_solana_payload) => {
+                Self::SolanaPayload(exact_solana_payload.into())
+            }
+        })
+    }
 }
 
 /// Describes a signed request to transfer a specific amount of funds on-chain.
@@ -314,6 +411,18 @@ pub struct PaymentPayload {
     pub scheme: Scheme,
     pub network: Network,
     pub payload: ExactPaymentPayload,
+}
+
+impl TryFrom<PaymentPayload> for cdp_sdk::types::X402PaymentPayload {
+    type Error = FacilitatorErrorReason;
+    fn try_from(value: PaymentPayload) -> Result<cdp_sdk::types::X402PaymentPayload, Self::Error> {
+        Ok(Self {
+            network: value.network.try_into()?,
+            payload: value.payload.clone().try_into()?,
+            scheme: value.scheme.into(),
+            x402_version: value.x402_version.into(),
+        })
+    }
 }
 
 /// Error returned when decoding a base64-encoded [`PaymentPayload`] fails.
@@ -663,6 +772,18 @@ pub enum MixedAddress {
     Solana(Pubkey),
 }
 
+impl From<cdp_sdk::types::VerifyX402PaymentResponsePayer> for MixedAddress {
+    fn from(value: cdp_sdk::types::VerifyX402PaymentResponsePayer) -> Self {
+        if let Ok(pubkey) = value.parse::<Pubkey>() {
+            Self::Solana(pubkey)
+        } else if let Ok(address) = value.parse::<EvmAddress>() {
+            Self::Evm(address)
+        } else {
+            Self::Offchain(value.to_string())
+        }
+    }
+}
+
 #[macro_export]
 macro_rules! address_evm {
     ($s:literal) => {
@@ -860,6 +981,40 @@ pub struct PaymentRequirements {
     pub extra: Option<serde_json::Value>,
 }
 
+impl TryFrom<PaymentRequirements> for cdp_sdk::types::X402PaymentRequirements {
+    type Error = FacilitatorErrorReason;
+
+    fn try_from(value: PaymentRequirements) -> Result<Self, Self::Error> {
+        Ok(Self {
+            asset: value
+                .asset
+                .to_string()
+                .parse::<X402PaymentRequirementsAsset>()
+                .map_err(|error| FacilitatorErrorReason::FreeForm(error.to_string()))?,
+            description: value.description,
+            extra: match value.extra {
+                Some(serde_json::Value::Object(map)) => map,
+                _ => Default::default(),
+            },
+            max_amount_required: value.max_amount_required.to_string(),
+            max_timeout_seconds: value.max_timeout_seconds as i64,
+            mime_type: value.mime_type,
+            network: value.network.try_into()?,
+            output_schema: match value.output_schema {
+                Some(serde_json::Value::Object(map)) => map,
+                _ => Default::default(),
+            },
+            pay_to: value
+                .pay_to
+                .to_string()
+                .parse::<X402PaymentRequirementsPayTo>()
+                .map_err(|error| FacilitatorErrorReason::FreeForm(error.to_string()))?,
+            resource: value.resource.to_string().into(),
+            scheme: value.scheme.into(),
+        })
+    }
+}
+
 impl PaymentRequirements {
     /// Returns the [`TokenAsset`] that identifies the token required for payment.
     ///
@@ -895,6 +1050,17 @@ pub struct VerifyRequest {
     pub x402_version: X402Version,
     pub payment_payload: PaymentPayload,
     pub payment_requirements: PaymentRequirements,
+}
+
+impl TryFrom<&VerifyRequest> for cdp_sdk::types::VerifyX402PaymentBody {
+    type Error = FacilitatorErrorReason;
+    fn try_from(value: &VerifyRequest) -> Result<Self, Self::Error> {
+        Ok(Self {
+            payment_payload: value.payment_payload.clone().try_into()?,
+            payment_requirements: value.payment_requirements.clone().try_into()?,
+            x402_version: value.x402_version.into(),
+        })
+    }
 }
 
 impl Display for VerifyRequest {
@@ -938,6 +1104,17 @@ pub enum FacilitatorErrorReason {
     UnexpectedSettleError,
     #[error("{0}")]
     FreeForm(String),
+}
+
+impl From<cdp_sdk::types::X402VerifyInvalidReason> for FacilitatorErrorReason {
+    fn from(value: cdp_sdk::types::X402VerifyInvalidReason) -> Self {
+        match value {
+            cdp_sdk::types::X402VerifyInvalidReason::InsufficientFunds => Self::InsufficientFunds,
+            cdp_sdk::types::X402VerifyInvalidReason::InvalidScheme => Self::InvalidScheme,
+            cdp_sdk::types::X402VerifyInvalidReason::InvalidNetwork => Self::InvalidNetwork,
+            error => Self::FreeForm(error.to_string()),
+        }
+    }
 }
 
 /// Returned from a facilitator after attempting to settle a payment on-chain.
@@ -993,6 +1170,21 @@ pub enum VerifyResponse {
         reason: FacilitatorErrorReason,
         payer: Option<MixedAddress>,
     },
+}
+
+impl From<cdp_sdk::types::VerifyX402PaymentResponse> for VerifyResponse {
+    fn from(value: cdp_sdk::types::VerifyX402PaymentResponse) -> Self {
+        if value.is_valid {
+            VerifyResponse::Valid {
+                payer: value.payer.into(),
+            }
+        } else {
+            VerifyResponse::Invalid {
+                reason: value.invalid_reason.unwrap().into(),
+                payer: Some(value.payer.into()),
+            }
+        }
+    }
 }
 
 impl VerifyResponse {

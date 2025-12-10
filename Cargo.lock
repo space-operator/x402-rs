@@ -1515,9 +1515,8 @@ dependencies = [
 
 [[package]]
 name = "cdp-sdk"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85847709462cf8886fa6d13407e8f109d1bbb48e968b0fc0e8cf81deaecb2a26"
+version = "0.2.0"
+source = "git+https://github.com/space-operator/cdp-sdk.git?branch=fix#420f0e1e75b2bb87ef5d4268b748ad277872c3f9"
 dependencies = [
  "async-trait",
  "base64",

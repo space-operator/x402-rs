@@ -48,3 +48,5 @@ alloy-dyn-abi = "1.4.1"
 alloy-signer-local = "1.1.1"
 alloy-transport = "1.1.1"
 alloy-signer = "1.1.1"
+
+cdp-sdk = { git = "https://github.com/space-operator/cdp-sdk.git", branch = "fix" }

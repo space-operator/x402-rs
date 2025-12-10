@@ -1,6 +1,4 @@
-use std::convert::Infallible;
-
-use x402_rs::{facilitator::Facilitator, types::SupportedPaymentKind};
+use x402_rs::facilitator::Facilitator;
 
 pub struct CdpFacilitatorClient {
     client: cdp_sdk::Client,
@@ -13,7 +11,13 @@ impl Facilitator for CdpFacilitatorClient {
         &self,
         request: &x402_rs::types::VerifyRequest,
     ) -> Result<x402_rs::types::VerifyResponse, Self::Error> {
-        todo!()
+        let resp = self
+            .client
+            .verify_x402_payment()
+            .body(request)
+            .send()
+            .await?;
+        Ok(resp.into_inner().into())
     }
 
     async fn settle(
