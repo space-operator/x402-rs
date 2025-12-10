@@ -8,6 +8,7 @@ use crate::types::{
 };
 use alloy_primitives::address;
 use once_cell::sync::Lazy;
+use serde::de::value::StringDeserializer;
 use serde::{Deserialize, Serialize};
 use solana_pubkey::Pubkey;
 use std::borrow::Borrow;
@@ -53,6 +54,14 @@ pub enum Network {
     /// Sei testnet (chain ID 1328).
     #[serde(rename = "sei-testnet")]
     SeiTestnet,
+}
+
+impl FromStr for Network {
+    type Err = serde::de::value::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::deserialize(StringDeserializer::new(s.to_owned()))
+    }
 }
 
 impl TryFrom<Network> for cdp_sdk::types::X402PaymentRequirementsNetwork {

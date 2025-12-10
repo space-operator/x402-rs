@@ -24,7 +24,15 @@ impl Facilitator for CdpFacilitatorClient {
         &self,
         request: &x402_rs::types::SettleRequest,
     ) -> Result<x402_rs::types::SettleResponse, Self::Error> {
-        todo!()
+        let resp = self
+            .client
+            .settle_x402_payment()
+            .body(request)
+            .send()
+            .await?;
+        resp.into_inner()
+            .try_into()
+            .map_err(|error: anyhow::Error| cdp_sdk::Error::Custom(error.to_string()))
     }
 
     async fn supported(

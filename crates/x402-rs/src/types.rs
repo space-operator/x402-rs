@@ -12,13 +12,14 @@ use alloy_sol_types::sol;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as b64;
 use cdp_sdk::types::{
-    X402ExactEvmPayloadAuthorizationFrom, X402ExactEvmPayloadAuthorizationTo,
-    X402PaymentRequirementsAsset, X402PaymentRequirementsPayTo,
+    SettleX402PaymentResponse, X402ExactEvmPayloadAuthorizationFrom,
+    X402ExactEvmPayloadAuthorizationTo, X402PaymentRequirementsAsset, X402PaymentRequirementsPayTo,
 };
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::{FromPrimitive, Zero};
+use serde::de::value::StringDeserializer;
 use serde::ser::SerializeStruct;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use solana_pubkey::Pubkey;
@@ -772,6 +773,14 @@ pub enum MixedAddress {
     Solana(Pubkey),
 }
 
+impl FromStr for MixedAddress {
+    type Err = serde::de::value::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::deserialize(StringDeserializer::new(s.to_owned()))
+    }
+}
+
 impl From<cdp_sdk::types::VerifyX402PaymentResponsePayer> for MixedAddress {
     fn from(value: cdp_sdk::types::VerifyX402PaymentResponsePayer) -> Self {
         if let Ok(pubkey) = value.parse::<Pubkey>() {
@@ -903,6 +912,14 @@ pub enum TransactionHash {
     /// A 32-byte EVM transaction hash, encoded as 0x-prefixed hex string.
     Evm([u8; 32]),
     Solana([u8; 64]),
+}
+
+impl FromStr for TransactionHash {
+    type Err = serde::de::value::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::deserialize(StringDeserializer::new(s.to_owned()))
+    }
 }
 
 impl<'de> Deserialize<'de> for TransactionHash {
@@ -1083,6 +1100,18 @@ impl VerifyRequest {
 /// to be used for settlement.
 pub type SettleRequest = VerifyRequest;
 
+impl TryFrom<&SettleRequest> for cdp_sdk::types::SettleX402PaymentBody {
+    type Error = FacilitatorErrorReason;
+
+    fn try_from(value: &SettleRequest) -> Result<Self, Self::Error> {
+        Ok(Self {
+            payment_payload: value.payment_payload.clone().try_into()?,
+            payment_requirements: value.payment_requirements.clone().try_into()?,
+            x402_version: value.x402_version.into(),
+        })
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, thiserror::Error)]
 #[serde(untagged, rename_all = "camelCase")]
 pub enum FacilitatorErrorReason {
@@ -1104,6 +1133,23 @@ pub enum FacilitatorErrorReason {
     UnexpectedSettleError,
     #[error("{0}")]
     FreeForm(String),
+}
+
+impl From<cdp_sdk::types::X402SettleErrorReason> for FacilitatorErrorReason {
+    fn from(value: cdp_sdk::types::X402SettleErrorReason) -> Self {
+        match value {
+            cdp_sdk::types::X402SettleErrorReason::InsufficientFunds => {
+                FacilitatorErrorReason::InsufficientFunds
+            }
+            cdp_sdk::types::X402SettleErrorReason::InvalidScheme => {
+                FacilitatorErrorReason::InvalidScheme
+            }
+            cdp_sdk::types::X402SettleErrorReason::InvalidNetwork => {
+                FacilitatorErrorReason::InvalidNetwork
+            }
+            error => FacilitatorErrorReason::FreeForm(error.to_string()),
+        }
+    }
 }
 
 impl From<cdp_sdk::types::X402VerifyInvalidReason> for FacilitatorErrorReason {
@@ -1129,6 +1175,19 @@ pub struct SettleResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub transaction: Option<TransactionHash>,
     pub network: Network,
+}
+
+impl TryFrom<SettleX402PaymentResponse> for SettleResponse {
+    type Error = anyhow::Error;
+    fn try_from(value: SettleX402PaymentResponse) -> Result<Self, Self::Error> {
+        Ok(Self {
+            success: value.success,
+            error_reason: value.error_reason.map(Into::into),
+            payer: value.payer.parse()?,
+            transaction: Some(value.transaction.parse()?),
+            network: value.network.parse()?,
+        })
+    }
 }
 
 /// Error returned when encoding a [`SettleResponse`] into base64 fails.
