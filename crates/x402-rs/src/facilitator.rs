@@ -3,6 +3,8 @@
 //! Implementors of this trait are responsible for validating incoming payment payloads
 //! against specified requirements [`Facilitator::verify`] and executing on-chain transfers [`Facilitator::settle`].
 
+use either::Either;
+
 use crate::types::{
     SettleRequest, SettleResponse, SupportedPaymentKindsResponse, VerifyRequest, VerifyResponse,
 };
@@ -79,5 +81,34 @@ impl<T: Facilitator> Facilitator for Arc<T> {
         &self,
     ) -> impl Future<Output = Result<SupportedPaymentKindsResponse, Self::Error>> + Send {
         self.as_ref().supported()
+    }
+}
+
+impl<A, B> Facilitator for Either<A, B>
+where
+    A: Facilitator + Sync,
+    B: Facilitator + Sync,
+{
+    type Error = Either<A::Error, B::Error>;
+
+    async fn verify(&self, request: &VerifyRequest) -> Result<VerifyResponse, Self::Error> {
+        match self {
+            Either::Left(a) => a.verify(request).await.map_err(Either::Left),
+            Either::Right(b) => b.verify(request).await.map_err(Either::Right),
+        }
+    }
+
+    async fn settle(&self, request: &SettleRequest) -> Result<SettleResponse, Self::Error> {
+        match self {
+            Either::Left(a) => a.settle(request).await.map_err(Either::Left),
+            Either::Right(b) => b.settle(request).await.map_err(Either::Right),
+        }
+    }
+
+    async fn supported(&self) -> Result<SupportedPaymentKindsResponse, Self::Error> {
+        match self {
+            Either::Left(a) => a.supported().await.map_err(Either::Left),
+            Either::Right(b) => b.supported().await.map_err(Either::Right),
+        }
     }
 }

@@ -7339,6 +7339,7 @@ dependencies = [
  "cdp-sdk",
  "dashmap",
  "dotenvy",
+ "either",
  "once_cell",
  "opentelemetry",
  "opentelemetry-otlp",
