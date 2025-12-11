@@ -4,6 +4,12 @@ pub struct CdpFacilitatorClient {
     client: cdp_sdk::Client,
 }
 
+impl CdpFacilitatorClient {
+    pub fn new(client: cdp_sdk::Client) -> Self {
+        Self { client }
+    }
+}
+
 impl Facilitator for CdpFacilitatorClient {
     type Error = cdp_sdk::Error<cdp_sdk::types::Error>;
 
