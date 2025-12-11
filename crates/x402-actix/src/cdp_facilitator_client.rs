@@ -1,5 +1,6 @@
 use x402_rs::facilitator::Facilitator;
 
+#[derive(Debug, Clone)]
 pub struct CdpFacilitatorClient {
     client: cdp_sdk::Client,
 }
