@@ -3,9 +3,12 @@
 //! This module defines supported networks and their chain IDs,
 //! and provides statically known USDC deployments per network.
 
-use crate::types::{MixedAddress, TokenAsset, TokenDeployment, TokenDeploymentEip712};
+use crate::types::{
+    FacilitatorErrorReason, MixedAddress, TokenAsset, TokenDeployment, TokenDeploymentEip712,
+};
 use alloy_primitives::address;
 use once_cell::sync::Lazy;
+use serde::de::value::StringDeserializer;
 use serde::{Deserialize, Serialize};
 use solana_pubkey::Pubkey;
 use std::borrow::Borrow;
@@ -51,6 +54,42 @@ pub enum Network {
     /// Sei testnet (chain ID 1328).
     #[serde(rename = "sei-testnet")]
     SeiTestnet,
+}
+
+impl FromStr for Network {
+    type Err = serde::de::value::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::deserialize(StringDeserializer::new(s.to_owned()))
+    }
+}
+
+impl TryFrom<Network> for cdp_sdk::types::X402PaymentRequirementsNetwork {
+    type Error = FacilitatorErrorReason;
+
+    fn try_from(value: Network) -> Result<Self, Self::Error> {
+        Ok(match value {
+            Network::BaseSepolia => Self::BaseSepolia,
+            Network::Base => Self::Base,
+            Network::Solana => Self::Solana,
+            Network::SolanaDevnet => Self::SolanaDevnet,
+            _ => return Err(FacilitatorErrorReason::InvalidNetwork),
+        })
+    }
+}
+
+impl TryFrom<Network> for cdp_sdk::types::X402PaymentPayloadNetwork {
+    type Error = FacilitatorErrorReason;
+
+    fn try_from(value: Network) -> Result<Self, Self::Error> {
+        Ok(match value {
+            Network::BaseSepolia => Self::BaseSepolia,
+            Network::Base => Self::Base,
+            Network::Solana => Self::Solana,
+            Network::SolanaDevnet => Self::SolanaDevnet,
+            _ => return Err(FacilitatorErrorReason::InvalidNetwork),
+        })
+    }
 }
 
 impl Display for Network {

@@ -33,10 +33,7 @@ async fn main() {
     let facilitator_url = "https://www.x402.org/facilitator/".to_string();
     // "https://facilitator.x402.rs"
     let facilitator = FacilitatorClient::try_new(facilitator_url.parse().unwrap()).unwrap();
-    let x402 = X402Middleware::new(facilitator)
-        .await
-        .unwrap()
-        .with_base_url("https://localhost:3000/".parse().unwrap());
+    let x402 = X402Middleware::new(facilitator).await.unwrap();
 
     HttpServer::new(move || {
         App::new()
