@@ -22,6 +22,7 @@ use rust_decimal::prelude::{FromPrimitive, Zero};
 use serde::de::value::StringDeserializer;
 use serde::ser::SerializeStruct;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_with::{VecSkipError, serde_as};
 use solana_pubkey::Pubkey;
 use std::borrow::Cow;
 use std::fmt;
@@ -1687,10 +1688,12 @@ pub struct SupportedPaymentKindExtra {
     pub fee_payer: MixedAddress,
 }
 
+#[serde_as]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[allow(dead_code)] // Public for consumption by downstream crates.
 pub struct SupportedPaymentKindsResponse {
+    #[serde_as(as = "VecSkipError<_>")]
     pub kinds: Vec<SupportedPaymentKind>,
 }
 
