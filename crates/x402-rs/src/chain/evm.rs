@@ -207,7 +207,7 @@ impl EvmProvider {
         let filler = JoinFill::new(
             GasFiller,
             JoinFill::new(
-                BlobGasFiller,
+                BlobGasFiller::default(),
                 JoinFill::new(
                     NonceFiller::new(nonce_manager.clone()),
                     ChainIdFiller::default(),
